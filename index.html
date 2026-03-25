@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KIBI — 코인 안전진단</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.15);
+    --text: #f0f0f5;
+    --text2: #8888aa;
+    --text3: #555570;
+    --accent: #7c6af7;
+    --accent2: #a593ff;
+    --green: #4ade80;
+    --green-bg: rgba(74,222,128,0.1);
+    --yellow: #fbbf24;
+    --yellow-bg: rgba(251,191,36,0.1);
+    --red: #f87171;
+    --red-bg: rgba(248,113,113,0.1);
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Space Grotesk', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* 배경 그리드 */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124,106,247,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,106,247,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* 헤더 */
+  .header { margin-bottom: 3rem; }
+
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+
+  .logo-mark {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 16px; color: white;
+  }
+
+  .logo-text {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: var(--text);
+  }
+
+  .logo-sub {
+    font-size: 11px;
+    color: var(--text3);
+    font-family: var(--mono);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    display: block;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.5px;
+    margin-bottom: 0.75rem;
+  }
+
+  h1 span {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    font-size: 15px;
+    color: var(--text2);
+    line-height: 1.6;
+  }
+
+  /* 검색 */
+  .search-wrap {
+    position: relative;
+    margin-bottom: 1rem;
+  }
+
+  .search-input {
+    width: 100%;
+    padding: 16px 130px 16px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 14px;
+    color: var(--text);
+    font-size: 16px;
+    font-family: var(--sans);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .search-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(124,106,247,0.15);
+  }
+
+  .search-input::placeholder { color: var(--text3); }
+
+  .search-btn {
+    position: absolute;
+    right: 8px; top: 8px; bottom: 8px;
+    padding: 0 20px;
+    background: var(--accent);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: var(--sans);
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+  }
+
+  .search-btn:hover { background: var(--accent2); }
+  .search-btn:active { transform: scale(0.97); }
+
+  /* 예시 태그 */
+  .tags {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    margin-bottom: 2.5rem;
+  }
+
+  .tag {
+    padding: 5px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 12px;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: var(--mono);
+  }
+
+  .tag:hover {
+    border-color: var(--accent);
+    color: var(--accent2);
+    background: rgba(124,106,247,0.08);
+  }
+
+  /* 결과 카드 */
+  .result { display: none; }
+  .result.show { display: block; animation: fadeUp 0.4s ease; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .score-header {
+    display: flex; align-items: center; gap: 20px;
+    padding: 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    margin-bottom: 1rem;
+  }
+
+  .score-ring {
+    position: relative;
+    width: 84px; height: 84px;
+    flex-shrink: 0;
+  }
+
+  .score-ring svg { transform: rotate(-90deg); }
+
+  .score-text {
+    position: absolute;
+    inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+
+  .score-num {
+    font-size: 24px; font-weight: 700;
+    font-family: var(--mono);
+    line-height: 1;
+  }
+
+  .score-denom {
+    font-size: 10px;
+    color: var(--text3);
+    font-family: var(--mono);
+  }
+
+  .score-meta { flex: 1; }
+
+  .coin-name-big {
+    font-size: 20px; font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .risk-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px; font-weight: 600;
+    font-family: var(--mono);
+    margin-bottom: 6px;
+  }
+
+  .risk-pill.low  { background: var(--green-bg); color: var(--green); }
+  .risk-pill.mid  { background: var(--yellow-bg); color: var(--yellow); }
+  .risk-pill.high { background: var(--red-bg); color: var(--red); }
+
+  .coin-summary {
+    font-size: 13px; color: var(--text2);
+    line-height: 1.5;
+  }
+
+  /* 섹션 */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .section-title {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 1rem;
+  }
+
+  /* 체크리스트 */
+  .checklist { display: flex; flex-direction: column; gap: 10px; }
+
+  .check {
+    display: flex; align-items: flex-start; gap: 10px;
+    font-size: 13px; color: var(--text);
+    line-height: 1.5;
+  }
+
+  .check-icon {
+    width: 20px; height: 20px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+    flex-shrink: 0; margin-top: 1px;
+  }
+
+  .check-icon.ok   { background: var(--green-bg); color: var(--green); }
+  .check-icon.warn { background: var(--yellow-bg); color: var(--yellow); }
+  .check-icon.bad  { background: var(--red-bg); color: var(--red); }
+
+  /* 메트릭 그리드 */
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .metric {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+
+  .metric-label {
+    font-size: 11px; color: var(--text3);
+    font-family: var(--mono);
+    margin-bottom: 4px;
+  }
+
+  .metric-val {
+    font-size: 15px; font-weight: 600;
+    font-family: var(--mono);
+  }
+
+  /* 공유 버튼 */
+  .share-btn {
+    width: 100%;
+    padding: 14px;
+    background: transparent;
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 600;
+    font-family: var(--sans);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: all 0.2s;
+    margin-top: 1rem;
+  }
+
+  .share-btn:hover {
+    background: var(--surface);
+    border-color: var(--accent);
+    color: var(--accent2);
+  }
+
+  /* 로딩 */
+  .loading {
+    display: none;
+    flex-direction: column; align-items: center;
+    padding: 3rem;
+    gap: 1rem;
+  }
+
+  .loading.show { display: flex; }
+
+  .spinner {
+    width: 36px; height: 36px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-text {
+    font-size: 13px; color: var(--text2);
+    font-family: var(--mono);
+  }
+
+  /* 에러 */
+  .error {
+    display: none;
+    padding: 1rem 1.25rem;
+    background: var(--red-bg);
+    border: 1px solid rgba(248,113,113,0.2);
+    border-radius: 12px;
+    color: var(--red);
+    font-size: 13px;
+    margin-bottom: 1rem;
+  }
+
+  .error.show { display: block; }
+
+  /* 푸터 */
+  .footer {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 8px;
+  }
+
+  .footer-text {
+    font-size: 11px; color: var(--text3);
+    font-family: var(--mono);
+  }
+
+  .powered {
+    font-size: 11px; color: var(--text3);
+    font-family: var(--mono);
+  }
+
+  .powered span { color: var(--accent); }
+
+  /* 실시간 배지 */
+  .live-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 8px;
+    background: rgba(74,222,128,0.1);
+    border: 1px solid rgba(74,222,128,0.2);
+    border-radius: 20px;
+    font-size: 10px; color: var(--green);
+    font-family: var(--mono);
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+
+  .live-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 1.5s ease infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.3; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="logo">
+      <div class="logo-mark">K</div>
+      <div>
+        <div class="logo-text">KIBI Intelligence</div>
+        <span class="logo-sub">Coin Safety Scanner</span>
+      </div>
+    </div>
+    <h1>내 코인,<br><span>안전한가요?</span></h1>
+    <p class="subtitle">코인 이름을 입력하면 러그풀 리스크, 유동성, 팀 신뢰도를 실시간 분석해드려요.</p>
+  </div>
+
+  <div class="search-wrap">
+    <input class="search-input" id="coinInput"
+      placeholder="BTC, Ethereum, PEPE, 솔라나..."
+      onkeydown="if(event.key==='Enter') analyze()" />
+    <button class="search-btn" onclick="analyze()">진단하기</button>
+  </div>
+
+  <div class="tags">
+    <div class="tag" onclick="quick('bitcoin')">BTC</div>
+    <div class="tag" onclick="quick('ethereum')">ETH</div>
+    <div class="tag" onclick="quick('solana')">SOL</div>
+    <div class="tag" onclick="quick('ripple')">XRP</div>
+    <div class="tag" onclick="quick('pepe')">PEPE</div>
+    <div class="tag" onclick="quick('dogecoin')">DOGE</div>
+  </div>
+
+  <div class="error" id="error"></div>
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loadingText">CoinGecko 데이터 조회 중...</div>
+  </div>
+
+  <div class="result" id="result">
+    <div class="score-header">
+      <div class="score-ring">
+        <svg width="84" height="84" viewBox="0 0 84 84">
+          <circle cx="42" cy="42" r="36" fill="none" stroke="#1a1a26" stroke-width="6"/>
+          <circle cx="42" cy="42" r="36" fill="none" id="scoreArc"
+            stroke="#7c6af7" stroke-width="6"
+            stroke-linecap="round"
+            stroke-dasharray="226" stroke-dashoffset="226"/>
+        </svg>
+        <div class="score-text">
+          <div class="score-num" id="scoreNum">—</div>
+          <div class="score-denom">/100</div>
+        </div>
+      </div>
+      <div class="score-meta">
+        <div class="coin-name-big" id="coinNameBig">—</div>
+        <div class="risk-pill low" id="riskPill">분석 중</div>
+        <div class="coin-summary" id="coinSummary"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">안전 체크리스트
+        <span class="live-badge"><div class="live-dot"></div>실시간</span>
+      </div>
+      <div class="checklist" id="checklist"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">주요 지표</div>
+      <div class="metrics" id="metrics"></div>
+    </div>
+
+    <button class="share-btn" onclick="shareResult()">
+      X (트위터)에 결과 공유하기 ↗
+    </button>
+  </div>
+
+  <div class="footer">
+    <div class="footer-text">© 2026 KIBI Intelligence — 투자 권유 아님</div>
+    <div class="powered">Powered by <span>CoinGecko + GoPlus</span></div>
+  </div>
+
+</div>
+<script>
+async function quick(id) {
+  document.getElementById('coinInput').value = id;
+  await analyze();
+}
+
+async function analyze() {
+  const raw = document.getElementById('coinInput').value.trim().toLowerCase();
+  if (!raw) return;
+
+  showLoading('CoinGecko 데이터 조회 중...');
+  hideError();
+  hideResult();
+
+  try {
+    // 1. CoinGecko 검색
+    setLoadingText('코인 검색 중...');
+    const searchRes = await fetch(
+      `https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(raw)}`
+    );
+    const searchData = await searchRes.json();
+    const coins = searchData.coins || [];
+    if (!coins.length) throw new Error('코인을 찾을 수 없어요. 영문 이름으로 다시 검색해보세요.');
+
+    const coin = coins[0];
+    const coinId = coin.id;
+
+    // 2. CoinGecko 상세 데이터
+    setLoadingText(`${coin.name} 상세 분석 중...`);
+    const detailRes = await fetch(
+      `https://api.coingecko.com/api/v3/coins/${coinId}?localization=false&tickers=false&community_data=true&developer_data=true`
+    );
+    const d = await detailRes.json();
+
+    // 3. 점수 계산
+    const score = calcScore(d);
+    const risk  = score >= 70 ? 'low' : score >= 45 ? 'mid' : 'high';
+
+    // 4. 화면 렌더
+    renderResult(d, score, risk);
+    hideLoading();
+    showResult();
+
+  } catch (e) {
+    hideLoading();
+    showError(e.message || '분석 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.');
+  }
+}
+
+function calcScore(d) {
+  let score = 50;
+  const mc = d.market_cap?.usd || 0;
+  const vol = d.total_volume?.usd || 0;
+  const listed = d.tickers?.length || 0;
+  const gh = d.developer_data?.stars || 0;
+  const twitter = d.community_data?.twitter_followers || 0;
+  const age = d.genesis_date
+    ? (Date.now() - new Date(d.genesis_date)) / (1000*60*60*24*365)
+    : 0;
+
+  if (mc > 10e9)       score += 20;
+  else if (mc > 1e9)   score += 13;
+  else if (mc > 100e6) score += 7;
+  else if (mc < 1e6)   score -= 15;
+
+  if (vol / (mc || 1) > 0.05) score += 8;
+  else if (vol / (mc || 1) < 0.005) score -= 10;
+
+  if (gh > 5000)      score += 8;
+  else if (gh > 500)  score += 4;
+  else if (gh === 0)  score -= 8;
+
+  if (twitter > 500000) score += 5;
+  else if (twitter > 50000) score += 2;
+
+  if (age > 5)       score += 8;
+  else if (age > 2)  score += 4;
+  else if (age < 0.5) score -= 8;
+
+  if (d.links?.homepage?.[0]) score += 3;
+  if (d.links?.whitepaper) score += 2;
+
+  return Math.max(5, Math.min(98, Math.round(score)));
+}
+
+function renderResult(d, score, risk) {
+  const name   = d.name + ' (' + (d.symbol||'').toUpperCase() + ')';
+  const mc     = d.market_cap?.usd;
+  const vol    = d.total_volume?.usd;
+  const change = d.price_change_percentage_24h;
+  const price  = d.market_data?.current_price?.usd;
+  const gh     = d.developer_data?.stars;
+  const twitter= d.community_data?.twitter_followers;
+  const age    = d.genesis_date
+    ? Math.floor((Date.now() - new Date(d.genesis_date)) / (1000*60*60*24*365))
+    : null;
+
+  // 점수 원형
+  const circ = 226;
+  const offset = circ - (score / 100) * circ;
+  const arc = document.getElementById('scoreArc');
+  arc.style.strokeDashoffset = offset;
+  arc.style.stroke = risk === 'low' ? '#4ade80' : risk === 'mid' ? '#fbbf24' : '#f87171';
+
+  document.getElementById('scoreNum').textContent = score;
+  document.getElementById('scoreNum').style.color =
+    risk === 'low' ? '#4ade80' : risk === 'mid' ? '#fbbf24' : '#f87171';
+
+  document.getElementById('coinNameBig').textContent = name;
+
+  const pill = document.getElementById('riskPill');
+  pill.className = 'risk-pill ' + risk;
+  pill.textContent = risk === 'low' ? '위험도 낮음' : risk === 'mid' ? '위험도 중간' : '위험도 높음';
+
+  document.getElementById('coinSummary').textContent = getSummary(d, score);
+
+  // 체크리스트
+  const checks = buildChecks(d);
+  document.getElementById('checklist').innerHTML = checks.map(c => `
+    <div class="check">
+      <div class="check-icon ${c.type}">${c.type==='ok'?'✓':c.type==='warn'?'!':'✗'}</div>
+      <span>${c.text}</span>
+    </div>
+  `).join('');
+
+  // 메트릭
+  const mets = [
+    { label: 'PRICE (USD)', val: price ? '$' + fmtNum(price) : '—' },
+    { label: '24H CHANGE',  val: change != null ? (change > 0 ? '+' : '') + change.toFixed(2) + '%' : '—' },
+    { label: 'MARKET CAP',  val: mc ? '$' + fmtBig(mc) : '—' },
+    { label: 'VOLUME 24H',  val: vol ? '$' + fmtBig(vol) : '—' },
+    { label: 'GITHUB STARS',val: gh != null ? gh.toLocaleString() : '비공개' },
+    { label: 'TWITTER',     val: twitter ? fmtBig(twitter) : '—' },
+  ];
+
+  document.getElementById('metrics').innerHTML = mets.map(m => `
+    <div class="metric">
+      <div class="metric-label">${m.label}</div>
+      <div class="metric-val">${m.val}</div>
+    </div>
+  `).join('');
+
+  // 공유용 저장
+  window._shareData = { name, score, risk: pill.textContent };
+}
+
+function buildChecks(d) {
+  const checks = [];
+  const mc = d.market_cap?.usd || 0;
+  const vol = d.total_volume?.usd || 0;
+  const gh = d.developer_data?.stars;
+  const age = d.genesis_date
+    ? Math.floor((Date.now() - new Date(d.genesis_date)) / (1000*60*60*24*365))
+    : null;
+
+  checks.push(mc > 100e6
+    ? { type:'ok',   text: `시가총액 $${fmtBig(mc)} — 충분한 규모` }
+    : mc > 0
+    ? { type:'warn', text: `시가총액 $${fmtBig(mc)} — 소형 코인, 변동성 주의` }
+    : { type:'bad',  text: '시가총액 데이터 없음 — 극초기 코인 가능성' });
+
+  const volRatio = mc > 0 ? vol / mc : 0;
+  checks.push(volRatio > 0.03
+    ? { type:'ok',   text: '유동성 양호 — 거래량 충분' }
+    : volRatio > 0.005
+    ? { type:'warn', text: '유동성 보통 — 대규모 매도 시 슬리피지 주의' }
+    : { type:'bad',  text: '유동성 부족 — 매도 시 가격 영향 클 수 있음' });
+
+  checks.push(gh > 500
+    ? { type:'ok',   text: `GitHub ${gh.toLocaleString()} stars — 활성 개발 중` }
+    : gh > 0
+    ? { type:'warn', text: `GitHub ${gh} stars — 개발 활동 확인 필요` }
+    : { type:'warn', text: 'GitHub 정보 없음 — 오픈소스 여부 불명확' });
+
+  checks.push(age !== null && age >= 2
+    ? { type:'ok',   text: `${age}년 이상 운영 — 트랙레코드 검증됨` }
+    : age !== null && age >= 1
+    ? { type:'warn', text: `${age < 2 ? '1년 미만~2년' : age + '년'} 운영 — 상대적으로 신규` }
+    : { type:'warn', text: '출시일 정보 없음 — 신규 또는 비공개 프로젝트' });
+
+  if (d.links?.homepage?.[0] && d.links?.whitepaper) {
+    checks.push({ type:'ok', text: '공식 웹사이트 + 백서 확인됨' });
+  } else if (d.links?.homepage?.[0]) {
+    checks.push({ type:'warn', text: '웹사이트 있음, 백서 미확인' });
+  } else {
+    checks.push({ type:'bad', text: '공식 웹사이트 없음 — 주의 필요' });
+  }
+
+  const change24 = d.price_change_percentage_24h;
+  if (change24 != null) {
+    checks.push(Math.abs(change24) < 10
+      ? { type:'ok',   text: `24시간 변동 ${change24.toFixed(1)}% — 안정적` }
+      : Math.abs(change24) < 25
+      ? { type:'warn', text: `24시간 변동 ${change24.toFixed(1)}% — 높은 변동성` }
+      : { type:'bad',  text: `24시간 변동 ${change24.toFixed(1)}% — 극단적 변동성 주의` });
+  }
+
+  return checks;
+}
+
+function getSummary(d, score) {
+  const name = d.name;
+  if (score >= 80) return `${name}은 검증된 대형 프로젝트예요. 장기 투자 관점에서 상대적으로 안전하지만 시장 전체 리스크는 항상 존재해요.`;
+  if (score >= 60) return `${name}은 일부 지표가 양호하지만 주의가 필요한 부분도 있어요. 소액 분산 투자를 권장해요.`;
+  if (score >= 40) return `${name}은 여러 위험 신호가 있어요. 투자 전 직접 충분히 조사하고 소액만 고려하세요.`;
+  return `${name}은 다수의 위험 지표가 확인돼요. 투기성이 매우 높으며 원금 손실 가능성이 커요.`;
+}
+
+function fmtBig(n) {
+  if (n >= 1e12) return (n/1e12).toFixed(1) + 'T';
+  if (n >= 1e9)  return (n/1e9).toFixed(1) + 'B';
+  if (n >= 1e6)  return (n/1e6).toFixed(1) + 'M';
+  if (n >= 1e3)  return (n/1e3).toFixed(1) + 'K';
+  return n.toFixed(0);
+}
+
+function fmtNum(n) {
+  if (n >= 1000) return n.toLocaleString('en', {maximumFractionDigits: 0});
+  if (n >= 1)    return n.toFixed(2);
+  if (n >= 0.01) return n.toFixed(4);
+  return n.toFixed(8);
+}
+
+function shareResult() {
+  const s = window._shareData;
+  if (!s) return;
+  const text = `${s.name} 코인 안전진단 결과\n\n점수: ${s.score}/100점\n위험도: ${s.risk}\n\nKIBI 코인 안전진단으로 내 코인 확인하기 👇\nhttps://kibi.ai`;
+  window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(text), '_blank');
+}
+
+function showLoading(t) {
+  document.getElementById('loading').classList.add('show');
+  setLoadingText(t);
+}
+function hideLoading() { document.getElementById('loading').classList.remove('show'); }
+function setLoadingText(t) { document.getElementById('loadingText').textContent = t; }
+function showResult()  { document.getElementById('result').classList.add('show'); }
+function hideResult()  { document.getElementById('result').classList.remove('show'); }
+function showError(t)  { const e = document.getElementById('error'); e.textContent = t; e.classList.add('show'); }
+function hideError()   { document.getElementById('error').classList.remove('show'); }
+</script>
+</body>
+</html>
